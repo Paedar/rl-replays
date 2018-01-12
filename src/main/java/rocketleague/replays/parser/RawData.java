@@ -9,7 +9,7 @@ public class RawData {
 		rawBytes = data;
 	}
 	
-	public static RawData buildFrom(byte[] data) {
+	public static RawData createFrom(byte[] data) {
 		if(data == null) {
 			throw new IllegalArgumentException("Data is a null reference");
 		}

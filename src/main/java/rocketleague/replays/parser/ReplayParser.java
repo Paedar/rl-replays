@@ -22,7 +22,7 @@ public class ReplayParser {
 			System.out.println("Sorry, I'm not actually dealing with this shit.");
 			e.printStackTrace();
 		}
-		return RawData.buildFrom(data);
+		return RawData.createFrom(data);
 	}
 
 }

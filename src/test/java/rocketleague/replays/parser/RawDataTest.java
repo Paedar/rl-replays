@@ -4,6 +4,7 @@ import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 
 import org.junit.Test;
 
@@ -11,13 +12,14 @@ public class RawDataTest {
 
 	@Test(expected = IllegalArgumentException.class)
 	public void testCreatorWithNull() {
-		RawData rawData = RawData.buildFrom(null);
+		RawData rawData = RawData.createFrom(null);
+		assertNull(rawData); // Note that if the creator works properly, this should never be evaluated
 	}
 	
 	@Test
 	public void testCreatorWithData() {
 		byte[] data = {0, 1, 2, 3};
-		RawData rawData = RawData.buildFrom(data);
+		RawData rawData = RawData.createFrom(data);
 		
 		assertNotNull(rawData);
 		assertEquals(data.length, rawData.length());
@@ -28,7 +30,7 @@ public class RawDataTest {
 	@Test
 	public void testGetRawBytesRange() {
 		byte[] data = {0, 1, 2};
-		RawData rawData = RawData.buildFrom(data);
+		RawData rawData = RawData.createFrom(data);
 
 		byte[] shortestBit = {0};
 		byte[] longerBit = {0, 1};
