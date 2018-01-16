@@ -78,16 +78,14 @@ public class ReplayParser {
 
 				buffer.getLong(); // These are 8 unknown bytes apparently
 				int arrayLength = buffer.getInt();
-				List<Property<?>> arrayProperty = new ArrayList<>();
+				List<List<Property<?>>> arrayProperty = new ArrayList<>();
 				for(int i = 0; i < arrayLength; ++i) {
-					Property<?> property = readProperty();
-					if(property != null) {
-						arrayProperty.add(property);
+					List<Property<?>> props = readProperties();
+					if(props != null) {
+						arrayProperty.add(props);
 					}
 				}
 				return new Property<>(propertyName, arrayProperty, List.class);
-			// throw new UnsupportedOperationException("Array property functionality is
-			// currently not supported.");
 
 			case "ByteProperty":
 				// elif type_name == 'ByteProperty':
