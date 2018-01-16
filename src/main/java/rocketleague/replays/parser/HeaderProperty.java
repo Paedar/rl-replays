@@ -1,11 +1,11 @@
 package rocketleague.replays.parser;
 
-public class Property<T> {
+public class HeaderProperty<T> {
 	public final String key;
 	public final T value;
 	public final Class<T> type;
 
-	public Property(String key, T value, Class<T> clazz) {
+	public HeaderProperty(String key, T value, Class<T> clazz) {
 		this.key = key;
 		this.value = value;
 		this.type = clazz;
