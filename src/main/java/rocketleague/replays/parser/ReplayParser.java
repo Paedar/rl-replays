@@ -126,6 +126,7 @@ public class ReplayParser {
 		if(length < 0) {
 			value = readString(Math.abs(length) * 2);
 			// Do re-encoding if necessary at all.
+			System.err.println("Re-encoding of property " + propertyName + " necessary?");
 		} else {
 			value = readString(length);
 		}
