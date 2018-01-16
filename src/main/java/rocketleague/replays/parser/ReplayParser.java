@@ -34,7 +34,7 @@ public class ReplayParser {
 		String version = readString();
 		System.out.format("Version string: %s\n", version);
 
-		List<Property<?>> headerProperties = readProperties();
+		List<HeaderProperty<?>> headerProperties = readProperties();
 		System.out.println(headerProperties);
 
 		System.out.println("Buffer position: " + buffer.position());
@@ -87,6 +87,9 @@ public class ReplayParser {
 
 		// data['property_tree'] = self._read_property_tree(replay_file,
 		// data['objects'], data['classes'])
+		List<PropertyTreeNode> propertyTree = readPropertyTree(objects, classes);
+		System.out.println(propertyTree);
+		System.out.println("Buffer position: " + buffer.position());
 
 		// assert replay_file.tell() == properties_length + remaining_length + 16
 
@@ -223,59 +226,81 @@ public class ReplayParser {
 		return classes;
 	}
 
-	// def _read_property_tree(self, replay_file, objects, classes):
-	// branches = []
-	//
-	// property_tree_length = self._read_integer(replay_file)
-	//
-	// for x in xrange(property_tree_length):
-	// data = {
-	// 'class': self._read_integer(replay_file),
-	// 'parent_id': self._read_integer(replay_file),
-	// 'id': self._read_integer(replay_file),
-	// 'properties': {}
-	// }
-	//
-	// if data['id'] == data['parent_id']:
-	// data['id'] = 0
-	//
-	// length = self._read_integer(replay_file)
-	//
-	// for x in xrange(length):
-	// index = self._read_integer(replay_file)
-	// value = self._read_integer(replay_file)
-	//
-	// data['properties'][index] = value
-	//
-	// branches.append(data)
-	//
-	// # Map the property keys against the class list.
-	// classed = {}
+	private List<PropertyTreeNode> readPropertyTree(List<String> objects, Map<Integer, String> classes) {
+		// def _read_property_tree(self, replay_file, objects, classes):
+		// branches = []
+		//
+		// property_tree_length = self._read_integer(replay_file)
+		//
+		// for x in xrange(property_tree_length):
+		// data = {
+		// 'class': self._read_integer(replay_file),
+		// 'parent_id': self._read_integer(replay_file),
+		// 'id': self._read_integer(replay_file),
+		// 'properties': {}
+		// }
+		//
+		// if data['id'] == data['parent_id']:
+		// data['id'] = 0
+		//
+		// length = self._read_integer(replay_file)
+		//
+		// for x in xrange(length):
+		// index = self._read_integer(replay_file)
+		// value = self._read_integer(replay_file)
+		//
+		// data['properties'][index] = value
+		//
+		// branches.append(data)
 
-	// def map_properties(id):
-	// for branch in branches:
-	// if branch['id'] == id:
-	// props = {}
-	//
-	// if branch['parent_id'] > 0:
-	// props = map_properties(branch['parent_id'])
-	//
-	// for k, v in enumerate(branch['properties']):
-	// props[v] = objects[k]
-	//
-	// return props
-	//
-	// return {}
+		int propertyTreeLength = buffer.getInt();
+		List<PropertyTreeNode> propertyTree = new ArrayList<>(propertyTreeLength);
+		for(int i = 0; i < propertyTreeLength; ++i) {
+			int clazz = buffer.getInt();
+			int parentId = buffer.getInt();
+			int id = buffer.getInt();
+			if(parentId == id) {
+				id = 0;
+			}
+			PropertyTreeNode node = new PropertyTreeNode(clazz, parentId, id);
+			int numberOfProperties = buffer.getInt();
+			for(int j = 0; j < numberOfProperties; ++j) {
+				node.properties.put(buffer.getInt(), buffer.getInt());
+			}
 
-	// for branch in branches:
-	// # {'parent_id': 36, 'properties': {42: 36}, 'class': 43, 'id': 37}
-	// classed[branch['class']] = {
-	// 'class': classes[branch['class']],
-	// 'properties': map_properties(branch['id'] if branch['id'] > 0 else
-	// branch['parent_id'])
-	// }
-	//
-	// return branches
+			propertyTree.add(node);
+		}
+
+
+		// # Map the property keys against the class list.
+		// classed = {}
+
+		// def map_properties(id):
+		// for branch in branches:
+		// if branch['id'] == id:
+		// props = {}
+		//
+		// if branch['parent_id'] > 0:
+		// props = map_properties(branch['parent_id'])
+		//
+		// for k, v in enumerate(branch['properties']):
+		// props[v] = objects[k]
+		//
+		// return props
+		//
+		// return {}
+
+		// for branch in branches:
+		// # {'parent_id': 36, 'properties': {42: 36}, 'class': 43, 'id': 37}
+		// classed[branch['class']] = {
+		// 'class': classes[branch['class']],
+		// 'properties': map_properties(branch['id'] if branch['id'] > 0 else
+		// branch['parent_id'])
+		// }
+		//
+		// return branches
+		return propertyTree;
+	}
 
 	// # Temporary method while we learn the replay format.
 	// def manual_parse(self, results, replay_file):
@@ -288,9 +313,9 @@ public class ReplayParser {
 	//
 	// return results
 
-	private List<Property<?>> readProperties() {
-		List<Property<?>> properties = new ArrayList<>();
-		Property<?> property;
+	private List<HeaderProperty<?>> readProperties() {
+		List<HeaderProperty<?>> properties = new ArrayList<>();
+		HeaderProperty<?> property;
 		do {
 			property = readProperty();
 			if(property != null) {
@@ -300,7 +325,7 @@ public class ReplayParser {
 		return properties;
 	}
 
-	private Property<?> readProperty() {
+	private HeaderProperty<?> readProperty() {
 		String propertyName = readString();
 		if(propertyName.equalsIgnoreCase("none")) {
 			return null;
@@ -328,54 +353,54 @@ public class ReplayParser {
 		}
 	}
 
-	private Property<?> readArrayProperty(String propertyName) {
+	private HeaderProperty<?> readArrayProperty(String propertyName) {
 		buffer.getLong(); // These are 8 unknown bytes apparently
 		int arrayLength = buffer.getInt();
-		List<List<Property<?>>> arrayProperty = new ArrayList<>();
+		List<List<HeaderProperty<?>>> arrayProperty = new ArrayList<>();
 		for(int i = 0; i < arrayLength; ++i) {
-			List<Property<?>> props = readProperties();
+			List<HeaderProperty<?>> props = readProperties();
 			if(props != null) {
 				arrayProperty.add(props);
 			}
 		}
-		return new Property<>(propertyName, arrayProperty, List.class);
+		return new HeaderProperty<>(propertyName, arrayProperty, List.class);
 	}
 
-	private Property<?> readByteProperty(String propertyName) {
+	private HeaderProperty<?> readByteProperty(String propertyName) {
 		buffer.getLong(); // These are 8 unknown bytes apparently
 		String byteKey = readString();
 		String byteValue = readString();
 		ByteProperty byteProperty = ByteProperty.of(byteKey, byteValue);
-		return new Property<>(propertyName, byteProperty, ByteProperty.class);
+		return new HeaderProperty<>(propertyName, byteProperty, ByteProperty.class);
 	}
 
-	private Property<?> readBoolProperty(String propertyName) {
+	private HeaderProperty<?> readBoolProperty(String propertyName) {
 		buffer.getLong(); // These are 8 unknown bytes apparently
 		byte singleByte = buffer.get();
 		if(singleByte == 0) {
-			return new Property<>(propertyName, new Boolean(false), Boolean.class);
+			return new HeaderProperty<>(propertyName, new Boolean(false), Boolean.class);
 		} else if(singleByte == 1) {
-			return new Property<>(propertyName, new Boolean(true), Boolean.class);
+			return new HeaderProperty<>(propertyName, new Boolean(true), Boolean.class);
 		}
 		throw new UnsupportedOperationException("Unable to read boolean property from byte value " + singleByte);
 	}
 
-	private Property<?> readNameProperty(String propertyName) {
+	private HeaderProperty<?> readNameProperty(String propertyName) {
 		return readStringProperty(propertyName);
 	}
 
-	private Property<?> readFloatProperty(String propertyName) {
+	private HeaderProperty<?> readFloatProperty(String propertyName) {
 		long floatLength = buffer.getLong();
 		if(floatLength == 4L) {
-			return new Property<>(propertyName, buffer.getFloat(), Float.class);
+			return new HeaderProperty<>(propertyName, buffer.getFloat(), Float.class);
 		} else if(floatLength == 8L) {
-			return new Property<>(propertyName, buffer.getDouble(), Double.class);
+			return new HeaderProperty<>(propertyName, buffer.getDouble(), Double.class);
 		}
 		throw new UnsupportedOperationException(
 				"Unable to parse a floating point number of length " + Long.toString(floatLength));
 	}
 
-	private Property<?> readStringProperty(String propertyName) {
+	private HeaderProperty<?> readStringProperty(String propertyName) {
 		buffer.getLong(); // These are 8 unknown bytes apparently
 		int length = buffer.getInt();
 		String value;
@@ -386,19 +411,19 @@ public class ReplayParser {
 		} else {
 			value = readString(length);
 		}
-		return new Property<String>(propertyName, value, String.class);
+		return new HeaderProperty<String>(propertyName, value, String.class);
 	}
 
-	private Property<?> readIntProperty(String propertyName) {
+	private HeaderProperty<?> readIntProperty(String propertyName) {
 		long integerLength = buffer.getLong();
 		if(integerLength == 1) {
-			return new Property<>(propertyName, new Character((char) buffer.get()), Character.class);
+			return new HeaderProperty<>(propertyName, new Character((char) buffer.get()), Character.class);
 		} else if(integerLength == 2) {
-			return new Property<>(propertyName, new Short(buffer.getShort()), Short.class);
+			return new HeaderProperty<>(propertyName, new Short(buffer.getShort()), Short.class);
 		} else if(integerLength == 4) {
-			return new Property<>(propertyName, new Integer(buffer.getInt()), Integer.class);
+			return new HeaderProperty<>(propertyName, new Integer(buffer.getInt()), Integer.class);
 		} else if(integerLength == 8) {
-			return new Property<>(propertyName, new Long(buffer.getLong()), Long.class);
+			return new HeaderProperty<>(propertyName, new Long(buffer.getLong()), Long.class);
 		}
 		throw new UnsupportedOperationException("Integer type of length " + integerLength + " not supported.");
 	}
