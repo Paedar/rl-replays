@@ -27,7 +27,8 @@ public class ReplayParser {
 		String version = readString();
 		System.out.format("Version string: %s\n", version);
 
-		readProperties();
+		List<Property<?>> properties = readProperties();
+		System.out.println(properties);
 	}
 
 	private List<Property<?>> readProperties() {
@@ -36,7 +37,6 @@ public class ReplayParser {
 		do {
 			property = readProperty();
 			if(property != null) {
-				System.out.println(property);
 				properties.add(property);
 			}
 		} while(property != null);
@@ -45,12 +45,10 @@ public class ReplayParser {
 
 	private Property<?> readProperty() {
 		String propertyName = readString();
-		System.out.format("Found property name %s\n", propertyName);
 		if(propertyName.equalsIgnoreCase("none")) {
 			return null;
 		}
 		String propertyType = readString();
-		System.out.format("Found property type %s\n", propertyType);
 		switch(propertyType) {
 			case "IntProperty":
 				return readIntProperty(propertyName);
@@ -100,12 +98,18 @@ public class ReplayParser {
 				// value = {
 				// byte_key: byte_value
 				// }
+				buffer.getLong(); // These are 8 unknown bytes apparently
+				String byteKey = readString();
+				String byteValue = readString();
+				ByteProperty byteProperty = ByteProperty.of(byteKey, byteValue);
+				return new Property<>(propertyName, byteProperty, ByteProperty.class);
 
 			case "QWordProperty":
 				// elif type_name == 'QWordProperty':
 				// # 64 bit int, 8 bytes.
 				// length = self._read_integer(replay_file, 8)
 				// value = self._read_integer(replay_file, length)
+				return readIntProperty(propertyName);
 
 			case "BoolProperty":
 				// elif type_name == 'BoolProperty':
@@ -116,6 +120,15 @@ public class ReplayParser {
 				// value = False
 				// elif value == 1:
 				// value = True
+				buffer.getLong(); // These are 8 unknown bytes apparently
+				byte singleByte = buffer.get();
+				if(singleByte == 0) {
+					return new Property<>(propertyName, new Boolean(false), Boolean.class);
+				} else if(singleByte == 1) {
+					return new Property<>(propertyName, new Boolean(true), Boolean.class);
+				}
+				throw new UnsupportedOperationException("Unable to read boolean property from byte value " + singleByte);
+				
 			default:
 				throw new UnsupportedOperationException("Unable to parse property type " + propertyType);
 
