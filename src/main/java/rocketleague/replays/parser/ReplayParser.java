@@ -4,7 +4,10 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 public class ReplayParser {
 
@@ -15,6 +18,8 @@ public class ReplayParser {
 	}
 
 	public void parse() {
+		System.out.println("Buffer limit: " + buffer.limit());
+		
 		buffer.order(ByteOrder.LITTLE_ENDIAN);
 		int propertiesLength = buffer.getInt();
 		System.out.format("Properties length: %d\n", propertiesLength);
@@ -27,9 +32,234 @@ public class ReplayParser {
 		String version = readString();
 		System.out.format("Version string: %s\n", version);
 
-		List<Property<?>> properties = readProperties();
-		System.out.println(properties);
+		List<Property<?>> headerProperties = readProperties();
+		System.out.println(headerProperties);
+
+		System.out.println("Buffer position: " + buffer.position());
+
+		int remainingLength = buffer.getInt();
+		System.out.println("Remaining length of data: " + remainingLength);
+		byte[] crc2 = new byte[4];
+		buffer.get(crc2);
+		System.out.format("CRC2: %s.%s.%s.%s\n", Byte.toString(crc2[0]), Byte.toString(crc2[1]), Byte.toString(crc2[2]),
+		        Byte.toString(crc2[3]));
+
+		List<String> maps = readLevelInfo();
+		System.out.println(maps);
+		System.out.println("Buffer position: " + buffer.position());
+
+		List<KeyFrame> keyFrames = readKeyFrames();
+		System.out.println(keyFrames);
+		System.out.println("Buffer position: " + buffer.position());
+
+		RawData networkStream = readNetworkStream();
+		System.out.println("Network stream length: " + networkStream.length());
+		System.out.println("Buffer position: " + buffer.position());
+
+		List<DebugString> debugStrings = readDebugStrings();
+		System.out.println(debugStrings);
+		System.out.println("Buffer position: " + buffer.position());
+
+		List<GoalTick> goalTicks = readGoalTicks();
+		System.out.println(goalTicks);
+		System.out.println("Buffer position: " + buffer.position());
+
+		// data['packages'] = self._read_packages(replay_file)
+
+		// data['objects'] = self._read_objects(replay_file)
+
+		// data['name_table'] = self._read_name_table(replay_file)
+
+		// data['classes'] = self._read_classes(replay_file)
+
+		// data['property_tree'] = self._read_property_tree(replay_file,
+		// data['objects'], data['classes'])
+
+		// assert replay_file.tell() == properties_length + remaining_length + 16
+
+		// # Run some manual parsing operations.
+		// data = self.manual_parse(data, replay_file)
+
 	}
+
+	private List<String> readLevelInfo() {
+		return Collections.nCopies(buffer.getInt(), "")
+		        .stream()
+		        .map(o -> readString())
+		        .collect(Collectors.toList());
+	}
+
+	private List<KeyFrame> readKeyFrames() {
+		return Collections.nCopies(buffer.getInt(), (KeyFrame) null)
+		        .stream()
+		        .map(o -> readKeyFrame())
+		        .collect(Collectors.toList());
+	}
+
+	private KeyFrame readKeyFrame() {
+		return KeyFrame.of(buffer.getFloat(), buffer.getInt(), buffer.getInt());
+	}
+
+	private RawData readNetworkStream() {
+		int streamLength = buffer.getInt();
+		return RawData.createFrom(readBytes(streamLength));
+	}
+
+	private List<DebugString> readDebugStrings() {	
+		// def _read_debug_strings(self, replay_file):
+		// array_length = self._read_integer(replay_file)
+		//
+		// if array_length == 0:
+		// return []
+		//
+		// debug_strings = []
+		//
+		// unknown = self._read_integer(replay_file)
+		//
+		// while len(debug_strings) < array_length:
+		// player_name = self._read_string(replay_file)
+		// debug_string = self._read_string(replay_file)
+		//
+		// debug_strings.append({
+		// 'PlayerName': player_name,
+		// 'DebugString': debug_string,
+		// })
+		//
+		// if len(debug_strings) < array_length:
+		// # Seems to be some nulls and an ACK?
+		// unknown = self._read_integer(replay_file)
+		//
+		// return debug_strings
+		int numberOfDebugStrings = buffer.getInt();
+		if(numberOfDebugStrings == 0) {
+			return Collections.emptyList();
+		}
+		buffer.getInt(); // Some unknown data
+		List<DebugString> debugStrings = Collections.nCopies(numberOfDebugStrings, (DebugString) null)
+		        .stream()
+		        .map(o -> DebugString.of(
+		                readString(),
+		                readString()))
+		        .collect(Collectors.toList());
+		
+		return debugStrings;
+	}
+
+	private List<GoalTick> readGoalTicks() {
+		int numberOfGoals = buffer.getInt();
+		System.out.println("Number of goals: " + numberOfGoals);
+		return Collections.nCopies(numberOfGoals, (GoalTick) null)
+				.stream()
+				.map(o -> GoalTick.of(readString(), buffer.getInt()))
+				.collect(Collectors.toList());
+	}
+
+	// def _read_packages(self, replay_file):
+	// num_packages = self._read_integer(replay_file)
+	//
+	// packages = []
+	//
+	// for x in xrange(num_packages):
+	// packages.append(self._read_string(replay_file))
+	//
+	// return packages
+
+	// def _read_objects(self, replay_file):
+	// num_objects = self._read_integer(replay_file)
+	//
+	// objects = []
+	//
+	// for x in xrange(num_objects):
+	// objects.append(self._read_string(replay_file))
+	//
+	// return objects
+
+	// def _read_name_table(self, replay_file):
+	// name_table_length = self._read_integer(replay_file)
+	// table = []
+	//
+	// for x in xrange(name_table_length):
+	// table.append(self._read_string(replay_file))
+	//
+	// return table
+
+	// def _read_classes(self, replay_file):
+	// class_index_map_length = self._read_integer(replay_file)
+	//
+	// class_index_map = {}
+	//
+	// for x in xrange(class_index_map_length):
+	// name = self._read_string(replay_file)
+	// integer = self._read_integer(replay_file)
+	//
+	// class_index_map[integer] = name
+	//
+	// return class_index_map
+
+	// def _read_property_tree(self, replay_file, objects, classes):
+	// branches = []
+	//
+	// property_tree_length = self._read_integer(replay_file)
+	//
+	// for x in xrange(property_tree_length):
+	// data = {
+	// 'class': self._read_integer(replay_file),
+	// 'parent_id': self._read_integer(replay_file),
+	// 'id': self._read_integer(replay_file),
+	// 'properties': {}
+	// }
+	//
+	// if data['id'] == data['parent_id']:
+	// data['id'] = 0
+	//
+	// length = self._read_integer(replay_file)
+	//
+	// for x in xrange(length):
+	// index = self._read_integer(replay_file)
+	// value = self._read_integer(replay_file)
+	//
+	// data['properties'][index] = value
+	//
+	// branches.append(data)
+	//
+	// # Map the property keys against the class list.
+	// classed = {}
+
+	// def map_properties(id):
+	// for branch in branches:
+	// if branch['id'] == id:
+	// props = {}
+	//
+	// if branch['parent_id'] > 0:
+	// props = map_properties(branch['parent_id'])
+	//
+	// for k, v in enumerate(branch['properties']):
+	// props[v] = objects[k]
+	//
+	// return props
+	//
+	// return {}
+
+	// for branch in branches:
+	// # {'parent_id': 36, 'properties': {42: 36}, 'class': 43, 'id': 37}
+	// classed[branch['class']] = {
+	// 'class': classes[branch['class']],
+	// 'properties': map_properties(branch['id'] if branch['id'] > 0 else
+	// branch['parent_id'])
+	// }
+	//
+	// return branches
+
+	// # Temporary method while we learn the replay format.
+	// def manual_parse(self, results, replay_file):
+	// server_regexp = re.compile(self.SERVER_REGEX)
+	//
+	// replay_file.seek(0)
+	// search = server_regexp.search(replay_file.read())
+	// if search:
+	// results['header']['ServerName'] = search.group()
+	//
+	// return results
 
 	private List<Property<?>> readProperties() {
 		List<Property<?>> properties = new ArrayList<>();
@@ -68,7 +298,6 @@ public class ReplayParser {
 				return readBoolProperty(propertyName);
 			default:
 				throw new UnsupportedOperationException("Unable to parse property type " + propertyType);
-
 		}
 	}
 
