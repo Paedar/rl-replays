@@ -52,101 +52,63 @@ public class ReplayParser {
 		switch(propertyType) {
 			case "IntProperty":
 				return readIntProperty(propertyName);
-
 			case "StrProperty":
 				return readStringProperty(propertyName);
-
 			case "FloatProperty":
 				return readFloatProperty(propertyName);
-
 			case "NameProperty":
 				return readNameProperty(propertyName);
-
 			case "ArrayProperty":
-				// elif type_name == 'ArrayProperty':
-				// # I imagine that this is the length of bytes that the data
-				// # in the "array" actually take up in the file.
-				// unknown = self._read_integer(replay_file, 8)
-				// array_length = self._read_integer(replay_file)
-				//
-				// value = [
-				// self._read_properties(replay_file)
-				// for x in xrange(array_length)
-				// ]
-
-				buffer.getLong(); // These are 8 unknown bytes apparently
-				int arrayLength = buffer.getInt();
-				List<List<Property<?>>> arrayProperty = new ArrayList<>();
-				for(int i = 0; i < arrayLength; ++i) {
-					List<Property<?>> props = readProperties();
-					if(props != null) {
-						arrayProperty.add(props);
-					}
-				}
-				return new Property<>(propertyName, arrayProperty, List.class);
-
+				return readArrayProperty(propertyName);
 			case "ByteProperty":
-				// elif type_name == 'ByteProperty':
-				// # This could be a new array type.
-				// # 25 (8) / 15 (4) / Str len 15 / Int (4) - 21 / Str len 21
-				//
-				// self._read_integer(replay_file, 8)
-				// key_length = self._read_integer(replay_file, 4)
-				// byte_key = self._read_string(replay_file, length=key_length)
-				// byte_value = self._read_string(replay_file)
-				//
-				// value = {
-				// byte_key: byte_value
-				// }
-				buffer.getLong(); // These are 8 unknown bytes apparently
-				String byteKey = readString();
-				String byteValue = readString();
-				ByteProperty byteProperty = ByteProperty.of(byteKey, byteValue);
-				return new Property<>(propertyName, byteProperty, ByteProperty.class);
-
+				return readByteProperty(propertyName);
 			case "QWordProperty":
-				// elif type_name == 'QWordProperty':
-				// # 64 bit int, 8 bytes.
-				// length = self._read_integer(replay_file, 8)
-				// value = self._read_integer(replay_file, length)
 				return readIntProperty(propertyName);
-
 			case "BoolProperty":
-				// elif type_name == 'BoolProperty':
-				// unknown = self._read_integer(replay_file, 8)
-				// value = self._read_integer(replay_file, 1)
-				//
-				// if value == 0:
-				// value = False
-				// elif value == 1:
-				// value = True
-				buffer.getLong(); // These are 8 unknown bytes apparently
-				byte singleByte = buffer.get();
-				if(singleByte == 0) {
-					return new Property<>(propertyName, new Boolean(false), Boolean.class);
-				} else if(singleByte == 1) {
-					return new Property<>(propertyName, new Boolean(true), Boolean.class);
-				}
-				throw new UnsupportedOperationException("Unable to read boolean property from byte value " + singleByte);
-				
+				return readBoolProperty(propertyName);
 			default:
 				throw new UnsupportedOperationException("Unable to parse property type " + propertyType);
 
 		}
 	}
 
-	private Property<?> readNameProperty(String propertyName) {
-		// elif type_name == 'NameProperty':
-		// unknown = self._read_integer(replay_file, 8)
-		// value = self._read_string(replay_file)
+	private Property<?> readArrayProperty(String propertyName) {
 		buffer.getLong(); // These are 8 unknown bytes apparently
-		return new Property<>(propertyName, readString(), String.class);
+		int arrayLength = buffer.getInt();
+		List<List<Property<?>>> arrayProperty = new ArrayList<>();
+		for(int i = 0; i < arrayLength; ++i) {
+			List<Property<?>> props = readProperties();
+			if(props != null) {
+				arrayProperty.add(props);
+			}
+		}
+		return new Property<>(propertyName, arrayProperty, List.class);
+	}
+
+	private Property<?> readByteProperty(String propertyName) {
+		buffer.getLong(); // These are 8 unknown bytes apparently
+		String byteKey = readString();
+		String byteValue = readString();
+		ByteProperty byteProperty = ByteProperty.of(byteKey, byteValue);
+		return new Property<>(propertyName, byteProperty, ByteProperty.class);
+	}
+
+	private Property<?> readBoolProperty(String propertyName) {
+		buffer.getLong(); // These are 8 unknown bytes apparently
+		byte singleByte = buffer.get();
+		if(singleByte == 0) {
+			return new Property<>(propertyName, new Boolean(false), Boolean.class);
+		} else if(singleByte == 1) {
+			return new Property<>(propertyName, new Boolean(true), Boolean.class);
+		}
+		throw new UnsupportedOperationException("Unable to read boolean property from byte value " + singleByte);
+	}
+
+	private Property<?> readNameProperty(String propertyName) {
+		return readStringProperty(propertyName);
 	}
 
 	private Property<?> readFloatProperty(String propertyName) {
-		// elif type_name == 'FloatProperty':
-		// length = self._read_integer(replay_file, 8)
-		// value = self._read_float(replay_file, length)
 		long floatLength = buffer.getLong();
 		if(floatLength == 4L) {
 			return new Property<>(propertyName, buffer.getFloat(), Float.class);
@@ -158,16 +120,6 @@ public class ReplayParser {
 	}
 
 	private Property<?> readStringProperty(String propertyName) {
-		// elif type_name == 'StrProperty':
-		// unknown = self._read_integer(replay_file, 8)
-		// length = self._read_integer(replay_file)
-		//
-		// if length < 0:
-		// length = abs(length) * 2
-		// value = self._read_string(replay_file,
-		// length)[:-1].decode('utf-16').encode('utf-8')
-		// else:
-		// value = self._read_string(replay_file, length)
 		buffer.getLong(); // These are 8 unknown bytes apparently
 		int length = buffer.getInt();
 		String value;
@@ -181,9 +133,6 @@ public class ReplayParser {
 	}
 
 	private Property<?> readIntProperty(String propertyName) {
-		// if type_name == 'IntProperty':
-		// value_length = self._read_integer(replay_file, 8)
-		// value = self._read_integer(replay_file, value_length)
 		long integerLength = buffer.getLong();
 		if(integerLength == 1) {
 			return new Property<>(propertyName, new Character((char) buffer.get()), Character.class);
