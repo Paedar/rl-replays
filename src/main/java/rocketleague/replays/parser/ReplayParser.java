@@ -5,7 +5,9 @@ import java.nio.ByteOrder;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -19,14 +21,14 @@ public class ReplayParser {
 
 	public void parse() {
 		System.out.println("Buffer limit: " + buffer.limit());
-		
+
 		buffer.order(ByteOrder.LITTLE_ENDIAN);
 		int propertiesLength = buffer.getInt();
 		System.out.format("Properties length: %d\n", propertiesLength);
 		byte[] crc = new byte[4];
 		buffer.get(crc);
 		System.out.format("CRC: %s.%s.%s.%s\n", Byte.toString(crc[0]), Byte.toString(crc[1]), Byte.toString(crc[2]),
-		        Byte.toString(crc[3]));
+				Byte.toString(crc[3]));
 		String versionNumber = String.format("%d.%d", buffer.getInt(), buffer.getInt());
 		System.out.println(versionNumber);
 		String version = readString();
@@ -42,7 +44,7 @@ public class ReplayParser {
 		byte[] crc2 = new byte[4];
 		buffer.get(crc2);
 		System.out.format("CRC2: %s.%s.%s.%s\n", Byte.toString(crc2[0]), Byte.toString(crc2[1]), Byte.toString(crc2[2]),
-		        Byte.toString(crc2[3]));
+				Byte.toString(crc2[3]));
 
 		List<String> maps = readLevelInfo();
 		System.out.println(maps);
@@ -64,13 +66,24 @@ public class ReplayParser {
 		System.out.println(goalTicks);
 		System.out.println("Buffer position: " + buffer.position());
 
-		// data['packages'] = self._read_packages(replay_file)
+		List<String> packages = readPackages();
+		System.out.println(packages);
+		System.out.println("Buffer position: " + buffer.position());
 
 		// data['objects'] = self._read_objects(replay_file)
+		List<String> objects = readObjects();
+		System.out.println(objects);
+		System.out.println("Buffer position: " + buffer.position());
 
 		// data['name_table'] = self._read_name_table(replay_file)
+		List<String> nameTable = readNameTable();
+		System.out.println(nameTable);
+		System.out.println("Buffer position: " + buffer.position());
 
 		// data['classes'] = self._read_classes(replay_file)
+		Map<Integer, String> classes = readClasses();
+		System.out.println(classes);
+		System.out.println("Buffer position: " + buffer.position());
 
 		// data['property_tree'] = self._read_property_tree(replay_file,
 		// data['objects'], data['classes'])
@@ -83,17 +96,21 @@ public class ReplayParser {
 	}
 
 	private List<String> readLevelInfo() {
+		return readStringList();
+	}
+
+	private List<String> readStringList() {
 		return Collections.nCopies(buffer.getInt(), "")
-		        .stream()
-		        .map(o -> readString())
-		        .collect(Collectors.toList());
+				.stream()
+				.map(o -> readString())
+				.collect(Collectors.toList());
 	}
 
 	private List<KeyFrame> readKeyFrames() {
 		return Collections.nCopies(buffer.getInt(), (KeyFrame) null)
-		        .stream()
-		        .map(o -> readKeyFrame())
-		        .collect(Collectors.toList());
+				.stream()
+				.map(o -> readKeyFrame())
+				.collect(Collectors.toList());
 	}
 
 	private KeyFrame readKeyFrame() {
@@ -105,7 +122,7 @@ public class ReplayParser {
 		return RawData.createFrom(readBytes(streamLength));
 	}
 
-	private List<DebugString> readDebugStrings() {	
+	private List<DebugString> readDebugStrings() {
 		// def _read_debug_strings(self, replay_file):
 		// array_length = self._read_integer(replay_file)
 		//
@@ -135,14 +152,12 @@ public class ReplayParser {
 			return Collections.emptyList();
 		}
 		buffer.getInt(); // Some unknown data
-		List<DebugString> debugStrings = Collections.nCopies(numberOfDebugStrings, (DebugString) null)
-		        .stream()
-		        .map(o -> DebugString.of(
-		                readString(),
-		                readString()))
-		        .collect(Collectors.toList());
-		
-		return debugStrings;
+		return Collections.nCopies(numberOfDebugStrings, (DebugString) null)
+				.stream()
+				.map(o -> DebugString.of(
+						readString(),
+						readString()))
+				.collect(Collectors.toList());
 	}
 
 	private List<GoalTick> readGoalTicks() {
@@ -154,15 +169,9 @@ public class ReplayParser {
 				.collect(Collectors.toList());
 	}
 
-	// def _read_packages(self, replay_file):
-	// num_packages = self._read_integer(replay_file)
-	//
-	// packages = []
-	//
-	// for x in xrange(num_packages):
-	// packages.append(self._read_string(replay_file))
-	//
-	// return packages
+	private List<String> readPackages() {
+		return readStringList();
+	}
 
 	// def _read_objects(self, replay_file):
 	// num_objects = self._read_integer(replay_file)
@@ -173,6 +182,9 @@ public class ReplayParser {
 	// objects.append(self._read_string(replay_file))
 	//
 	// return objects
+	private List<String> readObjects() {
+		return readStringList();
+	}
 
 	// def _read_name_table(self, replay_file):
 	// name_table_length = self._read_integer(replay_file)
@@ -182,6 +194,9 @@ public class ReplayParser {
 	// table.append(self._read_string(replay_file))
 	//
 	// return table
+	private List<String> readNameTable() {
+		return readStringList();
+	}
 
 	// def _read_classes(self, replay_file):
 	// class_index_map_length = self._read_integer(replay_file)
@@ -195,6 +210,18 @@ public class ReplayParser {
 	// class_index_map[integer] = name
 	//
 	// return class_index_map
+	private Map<Integer, String> readClasses() {
+		Map<Integer, String> classes = new HashMap<>();
+		int numberOfClasses = buffer.getInt();
+		IntStream.range(0, numberOfClasses)
+				.forEach(i -> {
+					String name = readString();
+					int id = buffer.getInt();
+					classes.put(id, name);
+				});
+
+		return classes;
+	}
 
 	// def _read_property_tree(self, replay_file, objects, classes):
 	// branches = []
@@ -345,7 +372,7 @@ public class ReplayParser {
 			return new Property<>(propertyName, buffer.getDouble(), Double.class);
 		}
 		throw new UnsupportedOperationException(
-		        "Unable to parse a floating point number of length " + Long.toString(floatLength));
+				"Unable to parse a floating point number of length " + Long.toString(floatLength));
 	}
 
 	private Property<?> readStringProperty(String propertyName) {
