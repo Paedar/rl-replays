@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
 public class ReplayParser {
 
@@ -103,16 +104,14 @@ public class ReplayParser {
 	}
 
 	private List<String> readStringList() {
-		return Collections.nCopies(buffer.getInt(), "")
-				.stream()
-				.map(o -> readString())
+		return Stream.generate(this::readString)
+				.limit(buffer.getInt())
 				.collect(Collectors.toList());
 	}
 
 	private List<KeyFrame> readKeyFrames() {
-		return Collections.nCopies(buffer.getInt(), (KeyFrame) null)
-				.stream()
-				.map(o -> readKeyFrame())
+		return Stream.generate(this::readKeyFrame)
+				.limit(buffer.getInt())
 				.collect(Collectors.toList());
 	}
 
