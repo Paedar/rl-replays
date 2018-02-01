@@ -92,10 +92,10 @@ public class ReplayParser {
 		System.out.println("Buffer position: " + buffer.position());
 
 		// assert replay_file.tell() == properties_length + remaining_length + 16
+		System.out.println("Expected position: " + (propertiesLength + remainingLength + 16));
 
 		// # Run some manual parsing operations.
 		// data = self.manual_parse(data, replay_file)
-
 	}
 
 	private List<String> readLevelInfo() {
@@ -256,13 +256,13 @@ public class ReplayParser {
 		int propertyTreeLength = buffer.getInt();
 		List<PropertyTreeNode> propertyTree = new ArrayList<>(propertyTreeLength);
 		for(int i = 0; i < propertyTreeLength; ++i) {
-			int clazz = buffer.getInt();
+			int classId = buffer.getInt();
 			int parentId = buffer.getInt();
 			int id = buffer.getInt();
 			if(parentId == id) {
 				id = 0;
 			}
-			PropertyTreeNode node = new PropertyTreeNode(clazz, parentId, id);
+			PropertyTreeNode node = new PropertyTreeNode(classId, parentId, id);
 			int numberOfProperties = buffer.getInt();
 			for(int j = 0; j < numberOfProperties; ++j) {
 				node.properties.put(buffer.getInt(), buffer.getInt());
@@ -271,10 +271,28 @@ public class ReplayParser {
 			propertyTree.add(node);
 		}
 
-
 		// # Map the property keys against the class list.
 		// classed = {}
 
+		// for branch in branches:
+		// # {'parent_id': 36, 'properties': {42: 36}, 'class': 43, 'id': 37}
+		// classed[branch['class']] = {
+		// 'class': classes[branch['class']],
+		// 'properties': map_properties(branch['id'] if branch['id'] > 0 else
+		// branch['parent_id'])
+		// }
+		//
+		// return branches
+
+		for(PropertyTreeNode ptn : propertyTree) {
+			ptn.className = classes.get(ptn.classId);
+			ptn.classedProperties.putAll(mapProperties(objects, propertyTree, ptn.id > 0 ? ptn.id : ptn.parentId));
+		}
+
+		return propertyTree;
+	}
+
+	private Map<Integer, String> mapProperties(List<String> objects, List<PropertyTreeNode> propertyTree, int id) {
 		// def map_properties(id):
 		// for branch in branches:
 		// if branch['id'] == id:
@@ -290,16 +308,28 @@ public class ReplayParser {
 		//
 		// return {}
 
-		// for branch in branches:
-		// # {'parent_id': 36, 'properties': {42: 36}, 'class': 43, 'id': 37}
-		// classed[branch['class']] = {
-		// 'class': classes[branch['class']],
-		// 'properties': map_properties(branch['id'] if branch['id'] > 0 else
-		// branch['parent_id'])
-		// }
-		//
-		// return branches
-		return propertyTree;
+		for(PropertyTreeNode ptn : propertyTree) {
+			if(ptn.id == id) {
+				Map<Integer, String> props;
+				if(ptn.parentId > 0) {
+					props = mapProperties(objects, propertyTree, ptn.parentId);
+				} else {
+					props = new HashMap<>();
+				}
+				props.putAll(
+						ptn.properties.entrySet().stream()
+								.collect(Collectors.toMap(
+										// Map.Entry::getKey,
+										// e -> objects.get(e.getValue()))));
+										// Note that it looks like key and value get swapped here, but so does the
+										// python lib
+										Map.Entry::getValue,
+										e -> objects.get(e.getKey()))));
+				return props;
+			}
+		}
+
+		return new HashMap<>();
 	}
 
 	// # Temporary method while we learn the replay format.
