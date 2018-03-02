@@ -30,8 +30,17 @@ public class ReplayParser {
 		buffer.get(crc);
 		System.out.format("CRC: %s.%s.%s.%s\n", Byte.toString(crc[0]), Byte.toString(crc[1]), Byte.toString(crc[2]),
 				Byte.toString(crc[3]));
-		String versionNumber = String.format("%d.%d", buffer.getInt(), buffer.getInt());
+		
+		int engineVersion = buffer.getInt();
+		int licenseeVersion = buffer.getInt();
+		String versionNumber = String.format("%d.%d", engineVersion, licenseeVersion);
 		System.out.println(versionNumber);
+		int netVersion = -1;
+		if (engineVersion >= 868 && licenseeVersion >= 18) {    	
+			netVersion = buffer.getInt();
+			System.out.println("Net version: " + netVersion);
+		}
+		
 		String version = readString();
 		System.out.format("Version string: %s\n", version);
 
