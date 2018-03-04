@@ -1,4 +1,4 @@
-package rocketleague.replays.parser;
+package rocketleague.replays.parser.metadata;
 
 public class ByteProperty {
 	public final String byteKey;

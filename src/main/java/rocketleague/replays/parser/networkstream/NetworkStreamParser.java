@@ -1,7 +1,7 @@
 package rocketleague.replays.parser.networkstream;
 
-import rocketleague.replays.parser.RawData;
 import rocketleague.replays.parser.util.BitBuffer;
+import rocketleague.replays.parser.util.RawData;
 
 public class NetworkStreamParser {
 	private final RawData streamBytes;

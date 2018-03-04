@@ -1,9 +1,12 @@
-package rocketleague.replays.parser;
+package rocketleague.replays.parser.util;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 
 import org.junit.Test;
+
+import rocketleague.replays.parser.util.FileLoader;
+import rocketleague.replays.parser.util.RawData;
 
 public class FileLoaderTest {
 

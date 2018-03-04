@@ -1,4 +1,4 @@
-package rocketleague.replays.parser;
+package rocketleague.replays.parser.metadata;
 
 public class HeaderProperty<T> {
 	public final String key;

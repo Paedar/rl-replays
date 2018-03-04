@@ -1,4 +1,4 @@
-package rocketleague.replays.parser;
+package rocketleague.replays.parser.util;
 
 import java.util.Arrays;
 

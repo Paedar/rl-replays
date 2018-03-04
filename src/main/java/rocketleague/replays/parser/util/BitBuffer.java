@@ -7,8 +7,6 @@ import java.util.BitSet;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
-import rocketleague.replays.parser.RawData;
-
 public class BitBuffer {
 	private static final int FLOAT_LENGTH_BYTES = 4;
 	private static final int DOUBLE_LENGTH_BYTES = 8;

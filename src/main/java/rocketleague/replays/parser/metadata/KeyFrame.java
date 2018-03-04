@@ -1,4 +1,4 @@
-package rocketleague.replays.parser;
+package rocketleague.replays.parser.metadata;
 // return {
 // 'time': time,
 // 'frame': frame,

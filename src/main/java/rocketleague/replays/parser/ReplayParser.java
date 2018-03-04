@@ -12,7 +12,14 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
+import rocketleague.replays.parser.metadata.ByteProperty;
+import rocketleague.replays.parser.metadata.DebugString;
+import rocketleague.replays.parser.metadata.GoalTick;
+import rocketleague.replays.parser.metadata.HeaderProperty;
+import rocketleague.replays.parser.metadata.KeyFrame;
+import rocketleague.replays.parser.metadata.PropertyTreeNode;
 import rocketleague.replays.parser.networkstream.NetworkStreamParser;
+import rocketleague.replays.parser.util.RawData;
 
 public class ReplayParser {
 
