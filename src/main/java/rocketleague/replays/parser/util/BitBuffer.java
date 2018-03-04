@@ -1,20 +1,31 @@
 package rocketleague.replays.parser.util;
 
+import java.nio.BufferOverflowException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.BitSet;
+import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
 import rocketleague.replays.parser.RawData;
 
 public class BitBuffer {
 	private static final int FLOAT_LENGTH_BYTES = 4;
 	private static final int DOUBLE_LENGTH_BYTES = 8;
+	private static final int INT_LENGTH_BYTES = 4;
 	private static final int BYTE = 8;
 	private final BitSet bits;
+	private final int numberOfBits;
 	private int position = 0;
 
 	private BitBuffer(final BitSet bs) {
 		bits = bs;
+		numberOfBits = bs.length();
+	}
+
+	private BitBuffer(final byte[] bytes) {
+		bits = BitSet.valueOf(bytes);
+		numberOfBits = BYTE * bytes.length;
 	}
 
 	public static BitBuffer of(final BitSet bs) {
@@ -24,11 +35,11 @@ public class BitBuffer {
 		return new BitBuffer(bs);
 	}
 
-	public static BitBuffer of(final byte[] data) {
-		if(data == null) {
+	public static BitBuffer of(final byte[] bytes) {
+		if(bytes == null) {
 			throw new IllegalArgumentException("Data is a null reference");
 		}
-		return of(BitSet.valueOf(data));
+		return new BitBuffer(bytes);
 	}
 
 	public static BitBuffer of(final RawData data) {
@@ -43,7 +54,7 @@ public class BitBuffer {
 	}
 
 	public int length() {
-		return bits.length();
+		return numberOfBits;
 	}
 
 	public boolean endOfStream() {
@@ -51,12 +62,12 @@ public class BitBuffer {
 	}
 
 	public boolean hasMoreBits(int numBits) {
-		return position + numBits <= bits.size();
+		return position + numBits <= this.length();
 	}
 
 	private void requireMoreBits(int numBits) {
 		if(!hasMoreBits(numBits)) {
-			throw new RuntimeException("Not enough bits left to read.");
+			throw new BufferOverflowException();
 		}
 	}
 
@@ -86,8 +97,12 @@ public class BitBuffer {
 		return bytes;
 	}
 
+	private int byteAsInt(byte byteVal) {
+		return 0xFF & byteVal;
+	}
+
 	public int readByteAsInt() {
-		return 0xFF & readByte();
+		return byteAsInt(readByte());
 	}
 
 	public int[] readBytesAsInt(int numBytes) {
@@ -95,7 +110,7 @@ public class BitBuffer {
 		byte[] bytes = readBytes(numBytes);
 
 		for(int i = 0; i < numBytes; ++i) {
-			ints[i] = 0xFF & bytes[i];
+			ints[i] = byteAsInt(bytes[i]);
 		}
 		return ints;
 	}
@@ -108,6 +123,20 @@ public class BitBuffer {
 	public double readDouble() {
 		byte[] doubleBytes = readBytes(DOUBLE_LENGTH_BYTES);
 		return ByteBuffer.wrap(doubleBytes).order(ByteOrder.LITTLE_ENDIAN).getDouble();
+	}
+
+	public int readInt(int numBits) {
+		if(numBits < 0) {
+			throw new IllegalArgumentException("Can't read a negative amount of bits");
+		}
+		if(numBits > BYTE * INT_LENGTH_BYTES) {
+			throw new IllegalArgumentException("Integer max length is " + BYTE * INT_LENGTH_BYTES + " bits.");
+		}
+		requireMoreBits(numBits);
+		
+		return IntStream.range(0, numBits).sequential()
+				.map((shift) -> readBitAsInt() << shift)
+				.reduce(0, (acc, shiftedBit) -> acc | shiftedBit);
 	}
 
 }

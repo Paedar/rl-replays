@@ -146,24 +146,15 @@ public class BitBufferTest {
 		BitBuffer doubleBuffer = BitBuffer.of(doubleBytes);
 
 		assertEquals(64, doubleBuffer.length());
-		assertEquals(doublePi, doubleBuffer.readFloat(), 0.0);
+		assertEquals(doublePi, doubleBuffer.readDouble(), 0.0);
 		assertEquals(64, doubleBuffer.getPosition());
 	}
 	
 	@Test
-	public void testBitSetLength() {
-		double doublePi = 3.14;
-		byte[] doubleBytes = ByteBuffer.allocate(8)
-				.order(ByteOrder.LITTLE_ENDIAN)
-				.putDouble(doublePi)
-				.array();
-		BitSet emptySet = new BitSet(doubleBytes.length * 8);
-		BitSet dataSet = BitSet.valueOf(doubleBytes);
-		
-		assertEquals(64, emptySet.size());
-		assertTrue(dataSet.length() <= 64);
-		
-		dataSet.or(emptySet);
-		assertEquals(64, dataSet.size());
+	public void testReadIntFromBits() {
+		BitBuffer buffer = BitBuffer.of(testBits);
+
+		assertEquals(1, buffer.readInt(5));
 	}
+
 }

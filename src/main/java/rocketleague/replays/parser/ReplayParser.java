@@ -12,6 +12,8 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
+import rocketleague.replays.parser.networkstream.NetworkStreamParser;
+
 public class ReplayParser {
 
 	private ByteBuffer buffer;
@@ -106,6 +108,10 @@ public class ReplayParser {
 
 		// # Run some manual parsing operations.
 		// data = self.manual_parse(data, replay_file)
+		
+		
+		NetworkStreamParser nsp = new NetworkStreamParser(networkStream);
+		nsp.parse();
 	}
 
 	private List<String> readLevelInfo() {
