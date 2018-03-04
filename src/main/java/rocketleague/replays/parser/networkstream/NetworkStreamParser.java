@@ -1,5 +1,8 @@
 package rocketleague.replays.parser.networkstream;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import rocketleague.replays.parser.util.BitBuffer;
 import rocketleague.replays.parser.util.RawData;
 
@@ -12,12 +15,16 @@ public class NetworkStreamParser {
 		this.buffer = BitBuffer.of(streamBytes.getRawBytes());
 	}
 	
-	public void parse() {
+	public List<Frame> parse() {
+		List<Frame> frames = new ArrayList<>(); 
 		readFrame();
+
+		return frames;
 	}
 	
-	public void readFrame() {
+	public Frame readFrame() {
 		Frame frame = Frame.from(buffer);
 		System.out.println(frame);
+		return frame;
 	}
 }

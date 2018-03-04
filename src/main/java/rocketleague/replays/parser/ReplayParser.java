@@ -15,51 +15,48 @@ import java.util.stream.Stream;
 import rocketleague.replays.parser.metadata.ByteProperty;
 import rocketleague.replays.parser.metadata.DebugString;
 import rocketleague.replays.parser.metadata.GoalTick;
+import rocketleague.replays.parser.metadata.Header;
 import rocketleague.replays.parser.metadata.HeaderProperty;
 import rocketleague.replays.parser.metadata.KeyFrame;
 import rocketleague.replays.parser.metadata.PropertyTreeNode;
+import rocketleague.replays.parser.metadata.ReplayVersion;
 import rocketleague.replays.parser.networkstream.NetworkStreamParser;
 import rocketleague.replays.parser.util.RawData;
 
 public class ReplayParser {
 
 	private ByteBuffer buffer;
+	private RawData rawData;
 
 	public ReplayParser(RawData data) {
 		this.buffer = ByteBuffer.wrap(data.getRawBytes());
+		this.rawData = data;
 	}
 
-	public void parse() {
-		System.out.println("Buffer limit: " + buffer.limit());
+	public Replay parse() {
+		Replay.Builder replayBuilder = Replay.getBuilder();
+		replayBuilder.rawData(this.rawData);
 
+		System.out.println("Buffer limit: " + buffer.limit());
 		buffer.order(ByteOrder.LITTLE_ENDIAN);
+
+		// Start of header
 		int propertiesLength = buffer.getInt();
-		System.out.format("Properties length: %d\n", propertiesLength);
 		byte[] crc = new byte[4];
 		buffer.get(crc);
-		System.out.format("CRC: %s.%s.%s.%s\n", Byte.toString(crc[0]), Byte.toString(crc[1]), Byte.toString(crc[2]),
-				Byte.toString(crc[3]));
-		
-		int engineVersion = buffer.getInt();
-		int licenseeVersion = buffer.getInt();
-		String versionNumber = String.format("%d.%d", engineVersion, licenseeVersion);
-		System.out.println(versionNumber);
-		int netVersion = -1;
-		if (engineVersion >= 868 && licenseeVersion >= 18) {    	
-			netVersion = buffer.getInt();
-			System.out.println("Net version: " + netVersion);
-		}
-		
-		String version = readString();
-		System.out.format("Version string: %s\n", version);
-
+		ReplayVersion replayVersion = ReplayVersion.readFrom(buffer);
+		String versionString = readString();
 		List<HeaderProperty<?>> headerProperties = readProperties();
-		System.out.println(headerProperties);
 
+		Header header = new Header(propertiesLength, crc, replayVersion, versionString, headerProperties);
+		replayBuilder.header(header);
+		System.out.println(header);
+		// End of header
 		System.out.println("Buffer position: " + buffer.position());
 
 		int remainingLength = buffer.getInt();
 		System.out.println("Remaining length of data: " + remainingLength);
+
 		byte[] crc2 = new byte[4];
 		buffer.get(crc2);
 		System.out.format("CRC2: %s.%s.%s.%s\n", Byte.toString(crc2[0]), Byte.toString(crc2[1]), Byte.toString(crc2[2]),
@@ -115,10 +112,11 @@ public class ReplayParser {
 
 		// # Run some manual parsing operations.
 		// data = self.manual_parse(data, replay_file)
-		
-		
+
 		NetworkStreamParser nsp = new NetworkStreamParser(networkStream);
 		nsp.parse();
+
+		return replayBuilder.build();
 	}
 
 	private List<String> readLevelInfo() {
@@ -352,17 +350,6 @@ public class ReplayParser {
 
 		return new HashMap<>();
 	}
-
-	// # Temporary method while we learn the replay format.
-	// def manual_parse(self, results, replay_file):
-	// server_regexp = re.compile(self.SERVER_REGEX)
-	//
-	// replay_file.seek(0)
-	// search = server_regexp.search(replay_file.read())
-	// if search:
-	// results['header']['ServerName'] = search.group()
-	//
-	// return results
 
 	private List<HeaderProperty<?>> readProperties() {
 		List<HeaderProperty<?>> properties = new ArrayList<>();
