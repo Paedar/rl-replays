@@ -62,11 +62,12 @@ public class ReplayParser {
 		System.out.format("CRC2: %s.%s.%s.%s\n", Byte.toString(crc2[0]), Byte.toString(crc2[1]), Byte.toString(crc2[2]),
 				Byte.toString(crc2[3]));
 
-		List<String> maps = readLevelInfo();
-		System.out.println(maps);
+		List<String> levelInfo = readLevelInfo();
+		System.out.println(levelInfo);
 		System.out.println("Buffer position: " + buffer.position());
 
 		List<KeyFrame> keyFrames = readKeyFrames();
+		System.out.println("-- KeyFrames --");
 		System.out.println(keyFrames);
 		System.out.println("Buffer position: " + buffer.position());
 
@@ -75,36 +76,46 @@ public class ReplayParser {
 		System.out.println("Buffer position: " + buffer.position());
 
 		List<DebugString> debugStrings = readDebugStrings();
+		System.out.println("-- Debug Strings --");
 		System.out.println(debugStrings);
 		System.out.println("Buffer position: " + buffer.position());
 
 		List<GoalTick> goalTicks = readGoalTicks();
+		System.out.println("-- Goal ticks --");
 		System.out.println(goalTicks);
 		System.out.println("Buffer position: " + buffer.position());
 
 		List<String> packages = readPackages();
+		System.out.println("-- Packages --");
 		System.out.println(packages);
 		System.out.println("Buffer position: " + buffer.position());
 
 		// data['objects'] = self._read_objects(replay_file)
 		List<String> objects = readObjects();
-		System.out.println(objects);
+		System.out.println("-- Objects --" );
+//		System.out.println(objects);
+		objects.stream().forEach(System.out::println);
 		System.out.println("Buffer position: " + buffer.position());
 
 		// data['name_table'] = self._read_name_table(replay_file)
 		List<String> nameTable = readNameTable();
-		System.out.println(nameTable);
+		System.out.println("-- Nametable --");
+//		System.out.println(nameTable);
+		nameTable.stream().forEach(System.out::println);
 		System.out.println("Buffer position: " + buffer.position());
 
 		// data['classes'] = self._read_classes(replay_file)
 		Map<Integer, String> classes = readClasses();
+		System.out.println("-- Classes --");
 		System.out.println(classes);
 		System.out.println("Buffer position: " + buffer.position());
 
 		// data['property_tree'] = self._read_property_tree(replay_file,
 		// data['objects'], data['classes'])
 		List<PropertyTreeNode> propertyTree = readPropertyTree(objects, classes);
-		System.out.println(propertyTree);
+		System.out.println("-- Property Tree -- To be renamed...");
+//		System.out.println(propertyTree);
+		propertyTree.stream().forEach(System.out::println);
 		System.out.println("Buffer position: " + buffer.position());
 
 		// assert replay_file.tell() == properties_length + remaining_length + 16
@@ -175,7 +186,7 @@ public class ReplayParser {
 			return Collections.emptyList();
 		}
 		buffer.getInt(); // Some unknown data
-		return Stream.generate(() -> DebugString.of(readString(),  readString()))
+		return Stream.generate(() -> DebugString.of(readString(), readString()))
 				.limit(numberOfDebugStrings)
 				.collect(Collectors.toList());
 	}
