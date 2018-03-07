@@ -29,6 +29,13 @@ public class Header {
 				+ "\t headerProperties=" + headerProperties + "\n]";
 	}
 	
+	public int maxChannels() {
+		return headerProperties.stream()
+				.filter((p) -> "MaxChannels".equals(p.key))
+				.findFirst()
+				.map(obj -> (Integer) obj.value)
+				.orElseThrow(() -> new RuntimeException("MaxChannels property not found"));
+	}
 	
 
 }

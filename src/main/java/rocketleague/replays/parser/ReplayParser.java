@@ -113,8 +113,9 @@ public class ReplayParser {
 		// # Run some manual parsing operations.
 		// data = self.manual_parse(data, replay_file)
 
-		NetworkStreamParser nsp = new NetworkStreamParser(networkStream);
-		nsp.parse();
+		System.out.println(" --- Parsing Network Stream ---");
+		NetworkStreamParser nsp = new NetworkStreamParser(networkStream, header);
+		nsp.parseKeyFrames(keyFrames);
 
 		return replayBuilder.build();
 	}

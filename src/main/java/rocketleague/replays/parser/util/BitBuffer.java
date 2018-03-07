@@ -51,6 +51,13 @@ public class BitBuffer {
 		return position;
 	}
 
+	public void setPosition(int newPosition) {
+		if(newPosition < 0 || newPosition > this.length()) {
+			throw new IllegalArgumentException("Position out of bounds of the buffer.");
+		}
+		this.position = newPosition;
+	}
+
 	public int length() {
 		return numberOfBits;
 	}
