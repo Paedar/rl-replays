@@ -175,20 +175,16 @@ public class ReplayParser {
 			return Collections.emptyList();
 		}
 		buffer.getInt(); // Some unknown data
-		return Collections.nCopies(numberOfDebugStrings, (DebugString) null)
-				.stream()
-				.map(o -> DebugString.of(
-						readString(),
-						readString()))
+		return Stream.generate(() -> DebugString.of(readString(),  readString()))
+				.limit(numberOfDebugStrings)
 				.collect(Collectors.toList());
 	}
 
 	private List<GoalTick> readGoalTicks() {
 		int numberOfGoals = buffer.getInt();
 		System.out.println("Number of goals: " + numberOfGoals);
-		return Collections.nCopies(numberOfGoals, (GoalTick) null)
-				.stream()
-				.map(o -> GoalTick.of(readString(), buffer.getInt()))
+		return Stream.generate(() -> GoalTick.of(readString(), buffer.getInt()))
+				.limit(numberOfGoals)
 				.collect(Collectors.toList());
 	}
 
