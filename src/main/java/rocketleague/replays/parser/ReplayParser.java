@@ -21,15 +21,15 @@ import rocketleague.replays.parser.metadata.PropertyTreeNode;
 import rocketleague.replays.parser.metadata.ReplayVersion;
 import rocketleague.replays.parser.networkstream.NetworkStreamParser;
 import rocketleague.replays.parser.util.RawData;
-import rocketleague.replays.parser.util.ReplayByteBuffer;
+import rocketleague.replays.parser.util.ReplayBuffer;
 
 public class ReplayParser {
 
-	private ReplayByteBuffer buffer;
+	private ReplayBuffer buffer;
 	private RawData rawData;
 
 	public ReplayParser(RawData data) {
-		this.buffer = new ReplayByteBuffer(ByteBuffer.wrap(data.getRawBytes()).order(ByteOrder.LITTLE_ENDIAN));
+		this.buffer = new ReplayBuffer(ByteBuffer.wrap(data.getRawBytes()).order(ByteOrder.LITTLE_ENDIAN));
 		this.rawData = data;
 	}
 
@@ -131,23 +131,13 @@ public class ReplayParser {
 	}
 
 	private List<String> readLevelInfo() {
-		return readStringList();
-	}
-
-	private List<String> readStringList() {
-		return Stream.generate(buffer::readString)
-				.limit(buffer.getInt())
-				.collect(Collectors.toList());
+		return buffer.readStringList();
 	}
 
 	private List<KeyFrame> readKeyFrames() {
-		return Stream.generate(this::readKeyFrame)
+		return Stream.generate(() -> KeyFrame.from(buffer))
 				.limit(buffer.getInt())
 				.collect(Collectors.toList());
-	}
-
-	private KeyFrame readKeyFrame() {
-		return KeyFrame.of(buffer.getFloat(), buffer.getInt(), buffer.getInt());
 	}
 
 	private RawData readNetworkStream() {
@@ -156,49 +146,21 @@ public class ReplayParser {
 	}
 
 	private List<DebugString> readDebugStrings() {
-		// def _read_debug_strings(self, replay_file):
-		// array_length = self._read_integer(replay_file)
-		//
-		// if array_length == 0:
-		// return []
-		//
-		// debug_strings = []
-		//
-		// unknown = self._read_integer(replay_file)
-		//
-		// while len(debug_strings) < array_length:
-		// player_name = self._read_string(replay_file)
-		// debug_string = self._read_string(replay_file)
-		//
-		// debug_strings.append({
-		// 'PlayerName': player_name,
-		// 'DebugString': debug_string,
-		// })
-		//
-		// if len(debug_strings) < array_length:
-		// # Seems to be some nulls and an ACK?
-		// unknown = self._read_integer(replay_file)
-		//
-		// return debug_strings
-		int numberOfDebugStrings = buffer.getInt();
-		if(numberOfDebugStrings == 0) {
-			return Collections.emptyList();
-		}
-		return Stream.generate(() -> DebugString.of(buffer.getInt(), buffer.readString(), buffer.readString()))
-				.limit(numberOfDebugStrings)
+		return Stream.generate(() -> DebugString.from(buffer))
+				.limit(buffer.getInt())
 				.collect(Collectors.toList());
 	}
 
 	private List<GoalTick> readGoalTicks() {
 		int numberOfGoals = buffer.getInt();
 		System.out.println("Number of goals: " + numberOfGoals);
-		return Stream.generate(() -> GoalTick.of(buffer.readString(), buffer.getInt()))
+		return Stream.generate(() -> GoalTick.from(buffer))
 				.limit(numberOfGoals)
 				.collect(Collectors.toList());
 	}
 
 	private List<String> readPackages() {
-		return readStringList();
+		return buffer.readStringList();
 	}
 
 	// def _read_objects(self, replay_file):
@@ -211,7 +173,7 @@ public class ReplayParser {
 	//
 	// return objects
 	private List<String> readObjects() {
-		return readStringList();
+		return buffer.readStringList();
 	}
 
 	// def _read_name_table(self, replay_file):
@@ -223,7 +185,7 @@ public class ReplayParser {
 	//
 	// return table
 	private List<String> readNameTable() {
-		return readStringList();
+		return buffer.readStringList();
 	}
 
 	// def _read_classes(self, replay_file):

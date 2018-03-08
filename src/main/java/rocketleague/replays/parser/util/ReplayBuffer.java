@@ -3,14 +3,17 @@ package rocketleague.replays.parser.util;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.apache.commons.codec.binary.StringUtils;
 
-public class ReplayByteBuffer {
+public class ReplayBuffer {
 
 	private final ByteBuffer buffer;
 	
-	public ReplayByteBuffer(ByteBuffer delegate) {
+	public ReplayBuffer(ByteBuffer delegate) {
 		this.buffer = delegate;
 	}
 	
@@ -79,6 +82,12 @@ public class ReplayByteBuffer {
 	public String readStringUtf16(int numCharacters) {
 		byte[] data = readBytes(numCharacters * 2);
 		return StringUtils.newStringUtf16Le(Arrays.copyOf(data, 2 * (numCharacters - 1)));
+	}
+
+	public List<String> readStringList() {
+		return Stream.generate(this::readString)
+				.limit(buffer.getInt())
+				.collect(Collectors.toList());
 	}
 	
 	public byte[] readBytes(int length) {

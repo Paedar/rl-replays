@@ -2,7 +2,7 @@ package rocketleague.replays.parser.metadata;
 
 import java.util.Optional;
 
-import rocketleague.replays.parser.util.ReplayByteBuffer;
+import rocketleague.replays.parser.util.ReplayBuffer;
 
 public class ReplayVersion {
 	private static final int MIN_LICENSEE_FOR_NET_VERSION = 18;
@@ -17,7 +17,7 @@ public class ReplayVersion {
 		this.netVersion = Optional.ofNullable(netVersion);
 	}
 
-	public static ReplayVersion readFrom(ReplayByteBuffer buffer) {
+	public static ReplayVersion readFrom(ReplayBuffer buffer) {
 		if(buffer == null) {
 			throw new IllegalArgumentException("Buffer can't be null.");
 		}
