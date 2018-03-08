@@ -22,14 +22,15 @@ import rocketleague.replays.parser.metadata.PropertyTreeNode;
 import rocketleague.replays.parser.metadata.ReplayVersion;
 import rocketleague.replays.parser.networkstream.NetworkStreamParser;
 import rocketleague.replays.parser.util.RawData;
+import rocketleague.replays.parser.util.ReplayByteBuffer;
 
 public class ReplayParser {
 
-	private ByteBuffer buffer;
+	private ReplayByteBuffer buffer;
 	private RawData rawData;
 
 	public ReplayParser(RawData data) {
-		this.buffer = ByteBuffer.wrap(data.getRawBytes());
+		this.buffer = new ReplayByteBuffer(ByteBuffer.wrap(data.getRawBytes()).order(ByteOrder.LITTLE_ENDIAN));
 		this.rawData = data;
 	}
 
@@ -38,14 +39,13 @@ public class ReplayParser {
 		replayBuilder.rawData(this.rawData);
 
 		System.out.println("Buffer limit: " + buffer.limit());
-		buffer.order(ByteOrder.LITTLE_ENDIAN);
 
 		// Start of header
 		int propertiesLength = buffer.getInt();
 		byte[] crc = new byte[4];
 		buffer.get(crc);
 		ReplayVersion replayVersion = ReplayVersion.readFrom(buffer);
-		String versionString = readString();
+		String versionString = buffer.readString();
 		List<HeaderProperty<?>> headerProperties = readProperties();
 
 		Header header = new Header(propertiesLength, crc, replayVersion, versionString, headerProperties);
@@ -136,7 +136,7 @@ public class ReplayParser {
 	}
 
 	private List<String> readStringList() {
-		return Stream.generate(this::readString)
+		return Stream.generate(buffer::readString)
 				.limit(buffer.getInt())
 				.collect(Collectors.toList());
 	}
@@ -153,7 +153,7 @@ public class ReplayParser {
 
 	private RawData readNetworkStream() {
 		int streamLength = buffer.getInt();
-		return RawData.createFrom(readBytes(streamLength));
+		return RawData.createFrom(buffer.readBytes(streamLength));
 	}
 
 	private List<DebugString> readDebugStrings() {
@@ -185,8 +185,7 @@ public class ReplayParser {
 		if(numberOfDebugStrings == 0) {
 			return Collections.emptyList();
 		}
-		buffer.getInt(); // Some unknown data
-		return Stream.generate(() -> DebugString.of(readString(), readString()))
+		return Stream.generate(() -> DebugString.of(buffer.getInt(), buffer.readString(), buffer.readString()))
 				.limit(numberOfDebugStrings)
 				.collect(Collectors.toList());
 	}
@@ -194,7 +193,7 @@ public class ReplayParser {
 	private List<GoalTick> readGoalTicks() {
 		int numberOfGoals = buffer.getInt();
 		System.out.println("Number of goals: " + numberOfGoals);
-		return Stream.generate(() -> GoalTick.of(readString(), buffer.getInt()))
+		return Stream.generate(() -> GoalTick.of(buffer.readString(), buffer.getInt()))
 				.limit(numberOfGoals)
 				.collect(Collectors.toList());
 	}
@@ -245,7 +244,7 @@ public class ReplayParser {
 		int numberOfClasses = buffer.getInt();
 		IntStream.range(0, numberOfClasses)
 				.forEach(i -> {
-					String name = readString();
+					String name = buffer.readString();
 					int id = buffer.getInt();
 					classes.put(id, name);
 				});
@@ -346,8 +345,8 @@ public class ReplayParser {
 				props.putAll(
 						ptn.properties.entrySet().stream()
 								.collect(Collectors.toMap(
-										// Map.Entry::getKey,
-										// e -> objects.get(e.getValue()))));
+//										 Map.Entry::getKey,
+//										 e -> objects.get(e.getValue()))));
 										// Note that it looks like key and value get swapped here, but so does the
 										// python lib
 										Map.Entry::getValue,
@@ -372,11 +371,11 @@ public class ReplayParser {
 	}
 
 	private HeaderProperty<?> readProperty() {
-		String propertyName = readString();
+		String propertyName = buffer.readString();
 		if(propertyName.equalsIgnoreCase("none")) {
 			return null;
 		}
-		String propertyType = readString();
+		String propertyType = buffer.readString();
 		switch(propertyType) {
 			case "IntProperty":
 				return readIntProperty(propertyName);
@@ -414,8 +413,8 @@ public class ReplayParser {
 
 	private HeaderProperty<?> readByteProperty(String propertyName) {
 		buffer.getLong(); // These are 8 unknown bytes apparently
-		String byteKey = readString();
-		String byteValue = readString();
+		String byteKey = buffer.readString();
+		String byteValue = buffer.readString();
 		ByteProperty byteProperty = ByteProperty.of(byteKey, byteValue);
 		return new HeaderProperty<>(propertyName, byteProperty, ByteProperty.class);
 	}
@@ -451,11 +450,9 @@ public class ReplayParser {
 		int length = buffer.getInt();
 		String value;
 		if(length < 0) {
-			value = readString(Math.abs(length) * 2);
-			// Do re-encoding if necessary at all.
-			System.err.println("Re-encoding of property " + propertyName + " necessary?");
+			value = buffer.readStringUtf16(Math.abs(length));
 		} else {
-			value = readString(length);
+			value = buffer.readString(length);
 		}
 		return new HeaderProperty<String>(propertyName, value, String.class);
 	}
@@ -472,22 +469,5 @@ public class ReplayParser {
 			return new HeaderProperty<>(propertyName, new Long(buffer.getLong()), Long.class);
 		}
 		throw new UnsupportedOperationException("Integer type of length " + integerLength + " not supported.");
-	}
-
-	private String readString() {
-		int length = buffer.getInt();
-		return readString(length);
-	}
-
-	private String readString(int length) {
-		byte[] data = readBytes(length);
-		String stringRead = new String(Arrays.copyOf(data, length - 1));
-		return stringRead;
-	}
-
-	private byte[] readBytes(int length) {
-		byte[] data = new byte[length];
-		buffer.get(data);
-		return data;
 	}
 }

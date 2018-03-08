@@ -1,7 +1,8 @@
 package rocketleague.replays.parser.metadata;
 
-import java.nio.ByteBuffer;
 import java.util.Optional;
+
+import rocketleague.replays.parser.util.ReplayByteBuffer;
 
 public class ReplayVersion {
 	private final int engineVersion;
@@ -14,7 +15,7 @@ public class ReplayVersion {
 		this.netVersion = Optional.ofNullable(netVersion);
 	}
 
-	public static ReplayVersion readFrom(ByteBuffer buffer) {
+	public static ReplayVersion readFrom(ReplayByteBuffer buffer) {
 		if(buffer == null) {
 			throw new IllegalArgumentException("Buffer can't be null.");
 		}
