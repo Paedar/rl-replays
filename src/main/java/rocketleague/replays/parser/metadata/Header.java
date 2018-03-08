@@ -29,7 +29,7 @@ public class Header {
 				+ "\t headerProperties=" + headerProperties + "\n]";
 	}
 	
-	public int maxChannels() {
+	public int getMaxChannels() {
 		return headerProperties.stream()
 				.filter((p) -> "MaxChannels".equals(p.key))
 				.findFirst()
@@ -37,5 +37,8 @@ public class Header {
 				.orElseThrow(() -> new RuntimeException("MaxChannels property not found"));
 	}
 	
+	public ReplayVersion getVersion() {
+		return version;
+	}
 
 }

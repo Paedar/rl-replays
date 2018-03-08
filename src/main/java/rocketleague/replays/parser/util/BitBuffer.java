@@ -3,9 +3,9 @@ package rocketleague.replays.parser.util;
 import java.nio.BufferOverflowException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.util.Arrays;
 import java.util.BitSet;
 import java.util.stream.IntStream;
-import java.util.stream.Stream;
 
 public class BitBuffer {
 	private static final int FLOAT_LENGTH_BYTES = 4;
@@ -97,7 +97,7 @@ public class BitBuffer {
 		}
 		int requiredBits = BYTE * numBytes;
 		requireMoreBits(requiredBits);
-		byte[] bytes = bits.get(position, position + requiredBits).toByteArray();
+		byte[] bytes = Arrays.copyOf(bits.get(position, position + requiredBits).toByteArray(), numBytes); // Ensures proper length, because the BitSet is weird
 		position += requiredBits;
 		return bytes;
 	}
@@ -121,7 +121,7 @@ public class BitBuffer {
 	}
 
 	public float readFloat() {
-		byte[] floatBytes = readBytes(FLOAT_LENGTH_BYTES);
+		byte[] floatBytes = readBytes(FLOAT_LENGTH_BYTES);		
 		return ByteBuffer.wrap(floatBytes).order(ByteOrder.LITTLE_ENDIAN).getFloat();
 	}
 

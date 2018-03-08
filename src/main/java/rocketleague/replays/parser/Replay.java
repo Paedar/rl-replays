@@ -1,7 +1,6 @@
 package rocketleague.replays.parser;
 
 import rocketleague.replays.parser.metadata.Header;
-import rocketleague.replays.parser.metadata.ReplayVersion;
 import rocketleague.replays.parser.util.RawData;
 
 public class Replay {

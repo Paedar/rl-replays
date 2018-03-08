@@ -20,14 +20,14 @@ public class NetworkStreamParser {
 	}
 	
 	public List<Frame> parseKeyFrames(List<KeyFrame> keyFrames) {
-		System.out.println("Max channels: " + header.maxChannels());
+		System.out.println("Max channels: " + header.getMaxChannels());
 		List<Frame> frames = keyFrames.stream()
 				.map((kf) -> { 
 					buffer.setPosition(kf.filePosition);
 					return Frame.from(buffer, this.header);
 				})
 				.collect(Collectors.toList());
-//		frames.forEach(System.out::println);
+		frames.forEach(System.out::println);
 		return frames;
 	}
 }

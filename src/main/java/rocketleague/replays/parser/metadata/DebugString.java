@@ -17,6 +17,8 @@ public class DebugString {
 
 	@Override
 	public String toString() {
-		return "DebugString [playerName=" + playerName + ", debugString=" + debugString + "]";
+		return "DebugString [frameNumber=" + frameNumber 
+				+ ", playerName=" + playerName 
+				+ ", debugString=" + debugString + "]";
 	}
 }

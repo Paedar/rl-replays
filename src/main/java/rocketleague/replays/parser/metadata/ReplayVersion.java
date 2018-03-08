@@ -5,6 +5,8 @@ import java.util.Optional;
 import rocketleague.replays.parser.util.ReplayByteBuffer;
 
 public class ReplayVersion {
+	private static final int MIN_LICENSEE_FOR_NET_VERSION = 18;
+	private static final int MIN_ENGINE_FOR_NET_VERSION = 868;
 	private final int engineVersion;
 	private final int licenseeVersion;
 	private final Optional<Integer> netVersion;
@@ -21,7 +23,10 @@ public class ReplayVersion {
 		}
 		int engineVersion = buffer.getInt();
 		int licenseeVersion = buffer.getInt();
-		Integer netVersion = engineVersion >= 868 && licenseeVersion >= 18 ? buffer.getInt() : null;
+		Integer netVersion = engineVersion >= MIN_ENGINE_FOR_NET_VERSION
+				&& licenseeVersion >= MIN_LICENSEE_FOR_NET_VERSION
+						? buffer.getInt()
+						: null;
 
 		return new ReplayVersion(engineVersion, licenseeVersion, netVersion);
 	}
