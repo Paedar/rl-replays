@@ -3,7 +3,6 @@ package rocketleague.replays.parser;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -19,6 +18,8 @@ import rocketleague.replays.parser.metadata.HeaderProperty;
 import rocketleague.replays.parser.metadata.KeyFrame;
 import rocketleague.replays.parser.metadata.PropertyTreeNode;
 import rocketleague.replays.parser.metadata.ReplayVersion;
+import rocketleague.replays.parser.networkstream.ClassNetCache;
+import rocketleague.replays.parser.networkstream.ClassNetCacheProperty;
 import rocketleague.replays.parser.networkstream.NetworkStreamParser;
 import rocketleague.replays.parser.util.RawData;
 import rocketleague.replays.parser.util.ReplayBuffer;
@@ -111,10 +112,11 @@ public class ReplayParser {
 
 		// data['property_tree'] = self._read_property_tree(replay_file,
 		// data['objects'], data['classes'])
-		List<PropertyTreeNode> propertyTree = readPropertyTree(objects, classes);
 		System.out.println("-- Property Tree -- To be renamed...");
-//		System.out.println(propertyTree);
-		propertyTree.stream().forEach(System.out::println);
+//		List<PropertyTreeNode> propertyTree = readPropertyTree(objects, classes);
+//		propertyTree.stream().forEach(System.out::println);
+		List<ClassNetCache> classNetCaches = readClassNetCaches();
+		classNetCaches.forEach(System.out::println);
 		System.out.println("Buffer position: " + buffer.position());
 
 		// assert replay_file.tell() == properties_length + remaining_length + 16
@@ -130,6 +132,42 @@ public class ReplayParser {
 		return replayBuilder.build();
 	}
 
+	private List<ClassNetCache> readClassNetCaches() {
+		int classNetCacheLength = buffer.getInt();
+		List<ClassNetCache> caches = new ArrayList<>(classNetCacheLength);
+		for(int i = 0; i < classNetCacheLength; ++i) {
+			ClassNetCache.Builder builder = ClassNetCache.getBuilder();
+			builder = builder.objectIndex(buffer.getInt())
+					.parentId(buffer.getInt())
+					.id(buffer.getInt())
+					.properties(readClassNetProperties());
+			ClassNetCache cache = builder.build();
+			caches.add(cache);
+			for(int j = i - 1; j >= 0; --j) {
+				if(cache.getParentId() == caches.get(j).getId()) {
+					cache.setParent(caches.get(j));
+					caches.get(j).addChild(cache);
+				}
+			}
+		}
+		return caches;
+	}
+	
+	public Map<Integer, ClassNetCacheProperty> readClassNetProperties() {
+		int numProperties = buffer.getInt();
+		return Stream.generate(() -> ClassNetCacheProperty.from(buffer))
+			.limit(numProperties)
+			.collect(Collectors.toMap(
+					ClassNetCacheProperty::getId,
+					(cncProp) -> cncProp));
+//		Map<Integer, ClassNetCacheProperty> properties = new HashMap<>();
+//		for(int i = 0; i < numProperties; ++i) {
+//			ClassNetCacheProperty property = ClassNetCacheProperty.from(buffer);
+//			properties.put(property.getId(), property);
+//		}
+//		return properties;
+	}
+	
 	private List<String> readLevelInfo() {
 		return buffer.readStringList();
 	}
@@ -247,7 +285,7 @@ public class ReplayParser {
 			int parentId = buffer.getInt();
 			int id = buffer.getInt();
 			if(parentId == id) {
-				id = 0;
+				id = 0; // Just curious why I would be doing this.
 			}
 			PropertyTreeNode node = new PropertyTreeNode(classId, parentId, id);
 			int numberOfProperties = buffer.getInt();

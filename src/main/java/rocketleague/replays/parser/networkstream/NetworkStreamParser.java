@@ -27,7 +27,7 @@ public class NetworkStreamParser {
 					return Frame.from(buffer, this.header);
 				})
 				.collect(Collectors.toList());
-		frames.forEach(System.out::println);
+//		frames.forEach(System.out::println);
 		return frames;
 	}
 }
