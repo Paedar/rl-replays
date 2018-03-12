@@ -121,8 +121,8 @@ public class BitBuffer {
 	}
 
 	public float readFloat() {
-		byte[] floatBytes = readBytes(FLOAT_LENGTH_BYTES);		
-		return ByteBuffer.wrap(floatBytes).order(ByteOrder.LITTLE_ENDIAN).getFloat();
+		int intBytes = readInt(FLOAT_LENGTH_BYTES * BYTE);
+		return Float.intBitsToFloat(intBytes);
 	}
 
 	public double readDouble() {
