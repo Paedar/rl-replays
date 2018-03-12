@@ -115,7 +115,7 @@ public class BitBufferTest {
 	@Test
 	public void testReadBytesAsInt() {
 		BitBuffer buffer = BitBuffer.of(testBits);
-		int[] ints = buffer.readBytesAsInt(2);
+		int[] ints = buffer.readBytesAsInts(2);
 		assertEquals(16, buffer.getPosition());
 		assertEquals(2, ints.length);
 		assertEquals(1, ints[0]);

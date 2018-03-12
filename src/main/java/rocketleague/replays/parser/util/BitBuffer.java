@@ -110,7 +110,7 @@ public class BitBuffer {
 		return byteAsInt(readByte());
 	}
 
-	public int[] readBytesAsInt(int numBytes) {
+	public int[] readBytesAsInts(int numBytes) {
 		int[] ints = new int[numBytes];
 		byte[] bytes = readBytes(numBytes);
 
